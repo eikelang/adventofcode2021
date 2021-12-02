@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class Day1_1 {
+class Day1_1 {
 
     private IntStream readFile() {
         var inputStream = Day1_1.class.getResourceAsStream("/day1_1.txt");
