@@ -36,6 +36,12 @@ class Day6 {
         assertThat(fishCount).isEqualTo(1749945484935L);
     }
 
+    @Test
+    void growVeryManyLanternfishForShitsAndGiggles() throws IOException {
+        final long fishCount = growLanternFishForDays(356 * 5);
+        assertThat(fishCount).isEqualTo(7216920158143844569L);
+    }
+
     private long growLanternFishForDays(final int days) throws IOException {
         final Map<Integer, Long> fish = readFile();
         for (int i = 0; i <= 8; i++) {
