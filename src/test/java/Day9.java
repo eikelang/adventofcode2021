@@ -1,8 +1,11 @@
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -12,6 +15,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.groups.Tuple.tuple;
 
 class Day9 {
 
@@ -33,9 +37,7 @@ class Day9 {
 
     @Test
     void countLowPointsSample() {
-        final Stream<Integer[]> stream = SMALL_EXAMPLE.lines().map(line -> toArray(line.chars()));
-        final List<Integer[]> collect = stream.collect(Collectors.toList());
-        final Integer[][] map = collect.toArray(new Integer[collect.size()][]);
+        final Integer[][] map = readString(SMALL_EXAMPLE);
         printMap(map);
 
         int lowPointSum = 0;
@@ -47,6 +49,13 @@ class Day9 {
             }
         }
         assertThat(lowPointSum).isEqualTo(15);
+    }
+
+    private Integer[][] readString(final String input) {
+        final Stream<Integer[]> stream = input.lines().map(line -> toArray(line.chars()));
+        final List<Integer[]> collect = stream.collect(Collectors.toList());
+        final Integer[][] map = collect.toArray(new Integer[collect.size()][]);
+        return map;
     }
 
     @Test
@@ -64,6 +73,13 @@ class Day9 {
         final Integer[][] map = readFile();
 
         printBasins(map);
+
+        final Integer result = findLowPointsInMap(map).stream().map(c -> findBasinAround(c.x, c.y, map)).map(Set::size)
+                .sorted(Comparator.reverseOrder())
+                .limit(3)
+                .reduce(1, (i1, i2) -> i1 * i2);
+
+        assertThat(result).isEqualTo(1123524);
     }
 
     private List<Coordinate> findLowPointsInMap(final Integer[][] map) {
@@ -71,7 +87,7 @@ class Day9 {
         for (int y = 0; y < map.length; y++) {
             for (int x = 0; x < map[0].length; x++) {
                 if (isLowPoint(x, y, map)) {
-                    lowPoints.add(new Coordinate(x,y));
+                    lowPoints.add(new Coordinate(x, y));
                 }
             }
         }
@@ -82,6 +98,108 @@ class Day9 {
     void testToArray() {
         final Integer[] integers = toArray("3245".chars());
         assertThat(integers).contains(3, 2, 4, 5);
+    }
+
+    @Test
+    void testNeighbourCalculationNoNeighbours() {
+        final Integer[][] map = readString("1");
+
+        assertThat(new Coordinate(0, 0).neighboursInMap(map)).isEmpty();
+    }
+
+    @Test
+    void testNeighbourCalculationSingleHorizontalNeighbour() {
+        final Integer[][] map = readString("12");
+
+        assertThat(new Coordinate(0, 0).neighboursInMap(map)).extracting(c -> c.x, c -> c.y)
+                .containsExactly(tuple(1, 0));
+    }
+
+    @Test
+    void testNeighbourCalculationSingleVerticalNeighbour() {
+        final Integer[][] map = readString("""
+                1
+                2""");
+
+        assertThat(new Coordinate(0, 0).neighboursInMap(map)).extracting(c -> c.x, c -> c.y)
+                .containsExactly(tuple(0, 1));
+    }
+
+    @Test
+    void testNeighbourCalculationCorner() {
+        final Integer[][] map = readString("""
+                12
+                24""");
+
+        assertThat(new Coordinate(0, 0).neighboursInMap(map)).extracting(c -> c.x, c -> c.y)
+                .containsExactlyInAnyOrder(tuple(0, 1), tuple(1, 0));
+    }
+
+    @Test
+    void testMiddleCel() {
+        final Integer[][] map = readString(SMALL_EXAMPLE);
+
+        assertThat(new Coordinate(2, 2).neighboursInMap(map)).extracting(c -> c.x, c -> c.y)
+                .containsExactlyInAnyOrder(tuple(1, 2), tuple(2, 1), tuple(3, 2), tuple(2, 3));
+    }
+
+    @Test
+    void findTopLeftBasin() {
+        final Integer[][] map = readString(SMALL_EXAMPLE);
+
+        final Set<Coordinate> basin = findBasinAround(0, 0, map);
+
+        assertThat(basin).containsExactlyInAnyOrder(new Coordinate(0, 0), new Coordinate(1, 0), new Coordinate(0, 1));
+    }
+
+    @Test
+    void findTopRightBasin() {
+        final Integer[][] map = readString(SMALL_EXAMPLE);
+
+        final Set<Coordinate> basin = findBasinAround(9, 0, map);
+
+        assertThat(basin).containsExactlyInAnyOrder(
+                new Coordinate(5, 0), new Coordinate(6, 0), new Coordinate(7, 0), new Coordinate(8, 0),
+                new Coordinate(9, 0),
+                new Coordinate(6, 1), new Coordinate(8, 1), new Coordinate(9, 1),
+                new Coordinate(9, 2));
+    }
+
+    @Test
+    void findMiddleBasin() {
+        final Integer[][] map = readString(SMALL_EXAMPLE);
+
+        final Set<Coordinate> basin = findBasinAround(2, 2, map);
+
+        assertThat(basin.size()).isEqualTo(14);
+    }
+
+    @Test
+    void findSampleBasins() {
+
+    }
+
+    private Set<Coordinate> findBasinAround(final int x, final int y, final Integer[][] map) {
+        final Map<Coordinate, Boolean> alreadyProcessed = new HashMap<>();
+        final Coordinate current = new Coordinate(x, y);
+        final Set<Coordinate> result = new HashSet<>();
+        result.add(current);
+        boolean continueProcessing = true;
+        while (continueProcessing) {
+            final Set<Coordinate> newPositions = new HashSet<>();
+            for (final Coordinate coord : result) {
+                if (!alreadyProcessed.getOrDefault(coord, false)) {
+                    newPositions.addAll(coord.neighboursInMap(map));
+                    alreadyProcessed.put(coord, true);
+                }
+            }
+            if (newPositions.isEmpty()) {
+                continueProcessing = false;
+            } else {
+                result.addAll(newPositions);
+            }
+        }
+        return result;
     }
 
     private void printMap(Integer[][] map) {
@@ -119,7 +237,7 @@ class Day9 {
 
     private boolean isLowPoint(int x, int y, Integer[][] map) {
         int mapValue = map[y][x];
-        
+
         List<Integer> xValues =
                 IntStream.rangeClosed(x - 1, x + 1)
                         .filter(i -> i >= 0 && i < map[0].length)
@@ -143,6 +261,7 @@ class Day9 {
     }
 
     private class Coordinate {
+
         int x;
         int y;
 
@@ -192,6 +311,14 @@ class Day9 {
         @Override
         public int hashCode() {
             return Objects.hash(x, y);
+        }
+
+        @Override
+        public String toString() {
+            return "(" +
+                    "x=" + x +
+                    ", y=" + y +
+                    ')';
         }
     }
 }
