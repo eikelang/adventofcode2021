@@ -129,13 +129,13 @@ class Day12 {
 
     @Test
     void pathsToPuzzleMapWithRevisit() {
-        final Map<String, Set<String>> passagesByStart = readFile()
+        final Map<String, Set<String>> passagesByStartPoint = readFile()
                 .map(s -> s.split("-"))
                 .flatMap(a -> Stream.of(new CavePassage(a[0], a[1]), new CavePassage(a[1], a[0])))
                 .collect(Collectors.groupingBy(cp -> cp.from, Collectors.mapping(cp -> cp.to, Collectors.toSet())));
-        passagesByStart.values().forEach(v -> v.remove("start"));
+        passagesByStartPoint.values().forEach(v -> v.remove("start"));
         final List<List<String>> result2 =
-                continuePath(singletonList("start"), passagesByStart, true)
+                continuePath(singletonList("start"), passagesByStartPoint, true)
                         .filter(list -> "end".equals(list.get(list.size() - 1)))
                         .collect(Collectors.toList());
         System.out.println(result2);
@@ -166,21 +166,15 @@ class Day12 {
             return Stream.of(currentPath);
         } else {
             return pathCandidates.stream().flatMap(candidate -> continuePath(augmentPath(currentPath, candidate),
-                    reducePaths(candidate, availablePaths, visitedSmallCaves,
-                            revisitingAllowed && !smallCaveAlreadyVisitedTwice),
+                    copyPaths(availablePaths),
                     revisitingAllowed && !smallCaveAlreadyVisitedTwice));
         }
 
     }
 
-    private Map<String, Set<String>> reducePaths(final String candidate,
-            final Map<String, Set<String>> availablePaths, final Set<String> smallCavesAlreadyVisited,
-            final boolean revisitingAllowed) {
+    private Map<String, Set<String>> copyPaths(final Map<String, Set<String>> availablePaths) {
         final HashMap<String, Set<String>> modifiedAvailablePaths = new HashMap<>();
         availablePaths.forEach((k, v) -> modifiedAvailablePaths.put(k, new HashSet<>(v)));
-        if (candidate.toLowerCase().equals(candidate) && !revisitingAllowed) {
-            modifiedAvailablePaths.values().forEach(set -> set.remove(candidate));
-        }
         return modifiedAvailablePaths;
     }
 
