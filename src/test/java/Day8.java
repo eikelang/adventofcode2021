@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,7 +57,7 @@ class Day8 {
     void fullDecodeSingleLine() {
         final String[] parts =
                 "acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab | cdfeb fcadb cdfeb cdbaf".split("\\|");
-        final Map<Set<Character>, Integer> decoderMap = createDecoder(parts);
+        final Map<Set<Character>, Integer> decoderMap = createDecoder(parts[0]);
 
         final int result = decodeLine(parts[1], decoderMap);
         assertThat(result).isEqualTo(5353);
@@ -67,10 +68,21 @@ class Day8 {
         final String[] parts =
         "daegb gadbcf cgefda edcfagb dfg acefbd fdgab fg bdcfa fcgb | cdfgba fgbc dbfac gfadbc".split("\\|");
 
-        final Map<Set<Character>, Integer> decoderMap = createDecoder(parts);
+        final Map<Set<Character>, Integer> decoderMap = createDecoder(parts[0]);
 
         final int result = decodeLine(parts[1], decoderMap);
         assertThat(result).isEqualTo(9459);
+    }
+
+    @Test
+    void fullDecode() {
+        final int sum = readFile().mapToInt(l -> {
+            final String[] parts = l.split("\\|");
+            final Map<Set<Character>, Integer> decoderMap = createDecoder(parts[0]);
+
+            return decodeLine(parts[1], decoderMap);
+        }).sum();
+        assertThat(sum).isEqualTo(1010460);
     }
 
     private int decodeLine(final String part, final Map<Set<Character>, Integer> decoderMap) {
@@ -84,28 +96,14 @@ class Day8 {
         return Integer.parseInt(intermediateResult);
     }
 
-    @Test
-    void fullDecode() {
-        final int sum = readFile().mapToInt(l -> {
-            final String[] parts = l.split("\\|");
-            final Map<Set<Character>, Integer> decoderMap = createDecoder(parts);
-
-            return decodeLine(parts[1], decoderMap);
-        }).sum();
-        assertThat(sum).isEqualTo(1010460);
-    }
-
-    private Map<Set<Character>, Integer> createDecoder(final String[] parts) {
-        final String[] stream = parts[0].split(" ");
-        final String[] output = parts[1].split(" ");
+    private Map<Set<Character>, Integer> createDecoder(final String signalString) {
+        final String[] signalStream = signalString.split(" ");
         final Map<Integer, List<Set<Character>>> signalsBySize =
-                Arrays.stream(stream).map(this::stringToChars).collect(Collectors.groupingBy(Set::size));
+                Arrays.stream(signalStream).map(this::stringToChars).collect(Collectors.groupingBy(Set::size));
         final Set<Character> oneSignals = signalsBySize.get(2).get(0);
         final Set<Character> sevenSignals = signalsBySize.get(3).get(0);
         final Set<Character> fourSignals = signalsBySize.get(4).get(0);
         final Set<Character> eightSignals = signalsBySize.get(7).get(0);
-        final Set<Character> topSignal = new HashSet<>(sevenSignals);
-        topSignal.removeAll(oneSignals);
         final Set<Character> nineSignals = signalsBySize.get(6).stream()
                 .filter(set -> set.containsAll(fourSignals))
                 .findFirst()
