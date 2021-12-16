@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import common.Coordinate;
+
 public class JellyfishField {
 
     private final Map<Coordinate, JellyFishState> jellyFishField;
@@ -13,8 +15,8 @@ public class JellyfishField {
 
     private JellyfishField(final Map<Coordinate, JellyFishState> field) {
         this.jellyFishField = field;
-        this.maxXindex = jellyFishField.keySet().stream().mapToInt(coord -> coord.x).max().orElse(0);
-        this.maxYindex = jellyFishField.keySet().stream().mapToInt(coord -> coord.y).max().orElse(0);
+        this.maxXindex = jellyFishField.keySet().stream().mapToInt(Coordinate::xValue).max().orElse(0);
+        this.maxYindex = jellyFishField.keySet().stream().mapToInt(Coordinate::yValue).max().orElse(0);
     }
 
     static JellyfishField fromInput(final Stream<String> lines) {

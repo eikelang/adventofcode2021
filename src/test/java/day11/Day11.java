@@ -12,6 +12,8 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
+import common.Coordinate;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class Day11 {
@@ -171,7 +173,7 @@ class Day11 {
                         flashGrid[y][x] = Boolean.TRUE;
                         final Set<Coordinate> coordinates = new Coordinate(x, y).neighboursInMap(octopusGrid);
                         for (final Coordinate coord : coordinates) {
-                            octopusGrid[coord.y][coord.x] += 1;
+                            octopusGrid[coord.yValue()][coord.xValue()] += 1;
                         }
                     }
                 }
