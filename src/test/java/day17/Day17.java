@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import common.Coordinate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.groups.Tuple.tuple;
 
 class Day17 {
 
@@ -23,19 +24,21 @@ class Day17 {
 
     @Test
     void tryVelocities() {
-        final List<Integer> xCandidates = IntStream.range(0, TARGET_X_MAX)
+        final List<Integer> xCandidates = IntStream.rangeClosed(0, TARGET_X_MAX)
                 .mapToObj(i -> new Probe(i, 0))
                 .filter(probe2 -> probe2.tryLaunchX(TARGET_X_MIN, TARGET_X_MAX))
                 .map(Probe::initialXVelocity)
                 .toList();
-        final List<Integer> yCandidates = IntStream.range(0, Math.abs(TARGET_Y_MIN))
+        final List<Integer> yCandidates = IntStream.rangeClosed(TARGET_Y_MIN, Math.abs(TARGET_Y_MIN))
                 .mapToObj(i -> new Probe(0, i))
                 .filter(probe1 -> probe1.tryLaunchY(TARGET_Y_MIN, TARGET_Y_MAX))
                 .map(Probe::initialYVelocity)
                 .toList();
-        final Optional<Probe> highestFlyingProbe = xCandidates.stream()
+        final List<Probe> allSuccessfulProbes = xCandidates.stream()
                 .flatMap(x -> yCandidates.stream().map(y -> new Probe(x, y)))
                 .filter(probe1 -> probe1.tryLaunch(TARGET_X_MIN, TARGET_X_MAX, TARGET_Y_MIN, TARGET_Y_MAX))
+                .toList();
+        final Optional<Probe> highestFlyingProbe = allSuccessfulProbes.stream()
                 .max(Comparator.comparing(Probe::initialYVelocity));
 
         final var reprobe = highestFlyingProbe
@@ -47,6 +50,8 @@ class Day17 {
             maxY = Math.max(maxY, reprobe.position().yValue());
         }
         assertThat(maxY).isEqualTo(10296);
+        // part two
+        assertThat(allSuccessfulProbes).hasSize(2371);
     }
 
     @Test
@@ -62,16 +67,76 @@ class Day17 {
             System.out.println("Position: " + probe.position());
             probe.step();
         }
+    }
 
+    @Test
+    void countVelocitiesExample() {
+        final int targetYMin = -10;
+        final int targetYMax = -5;
+        final int targetXMax = 30;
+        final int targetXMin = 20;
+        final List<Integer> xCandidates = IntStream.rangeClosed(0, targetXMax)
+                .mapToObj(i -> new Probe(i, 0))
+                .filter(p -> p.tryLaunchX(targetXMin, targetXMax))
+                .map(Probe::initialXVelocity)
+                .toList();
+        final List<Integer> yCandidates = IntStream.rangeClosed(targetYMin, Math.abs(targetYMin))
+                .mapToObj(i -> new Probe(0, i))
+                .filter(probe1 -> probe1.tryLaunchY(targetYMin, targetYMax))
+                .map(Probe::initialYVelocity)
+                .toList();
+        final List<Probe> allSuccessfulProbes = xCandidates.stream()
+                .flatMap(x -> yCandidates.stream().map(y -> new Probe(x, y)))
+                .filter(probe1 -> probe1.tryLaunch(targetXMin, targetXMax, targetYMin, targetYMax))
+                .toList();
+        final Optional<Probe> highestFlyingProbe = allSuccessfulProbes.stream()
+                .max(Comparator.comparing(Probe::initialYVelocity));
+
+        System.out.println(allSuccessfulProbes);
+
+        final var reprobe = highestFlyingProbe
+                .map(p -> new Probe(p.initialXVelocity(), p.initialYVelocity())).orElseThrow();
+        int maxY = 0;
+        while (!reprobe.inTargetArea(targetXMin, targetXMax, targetYMin, targetYMax)) {
+            reprobe.step();
+            maxY = Math.max(maxY, reprobe.position().yValue());
+        }
+        assertThat(maxY).isEqualTo(45);
+        assertThat(allSuccessfulProbes.stream()).extracting(Probe::initialXVelocity, Probe::initialYVelocity)
+                .contains(
+                        tuple(20, -10),
+                        tuple(30, -5)
+                );
+        assertThat(allSuccessfulProbes).hasSize(112);
+    }
+
+    @Test
+    void test() {
+        assertThat(new Probe(6, 9).tryLaunch(20, 30, -10, -5)).isTrue();
+    }
+
+    @Test
+    void testOneShot() {
+        assertThat(new Probe(20, -5).tryLaunch(20, 30, -10, -5)).isTrue();
+        assertThat(new Probe(20, 0).tryLaunchX(20, 30)).isTrue();
+        assertThat(new Probe(0, -5).tryLaunchY(-10, -5)).isTrue();
     }
 
     private class Probe {
+
         private final int initialYVelocity;
         private final int initialXVelocity;
         private int xVel;
         private int yVel;
         private int xPos;
         private int yPos;
+
+        @Override
+        public String toString() {
+            return "Probe{" +
+                    initialXVelocity +
+                    "," + initialYVelocity + '}';
+        }
 
         public Probe(final int initialXVelocity, final int initialYVelocity) {
             this.xVel = initialXVelocity;
@@ -112,8 +177,8 @@ class Day17 {
         }
 
         boolean tryLaunch(final int targetXMin, final int targetXMax, final int targetYMin, final int targetYMax) {
-            while (!inTargetArea(targetXMin, targetXMax, targetYMin, targetYMax) && !targetAreaUnreachable(TARGET_X_MAX,
-                    TARGET_Y_MIN, TARGET_X_MIN)) {
+            while (!inTargetArea(targetXMin, targetXMax, targetYMin, targetYMax) && !targetAreaUnreachable(targetXMax,
+                    targetYMin, targetYMax)) {
                 step();
             }
             return inTargetArea(targetXMin, targetXMax, targetYMin, targetYMax);
