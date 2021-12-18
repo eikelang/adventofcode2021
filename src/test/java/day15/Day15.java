@@ -2,8 +2,14 @@ package day15;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.ArrayDeque;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -12,6 +18,8 @@ import org.junit.jupiter.api.Test;
 
 import common.Coordinate;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singleton;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class Day15 {
@@ -42,8 +50,8 @@ class Day15 {
         return collect.toArray(new Integer[collect.size()][]);
     }
 
-    private Integer[][] readExample(final String EXAMPLE) {
-        final Stream<Integer[]> stream = EXAMPLE.lines().map(line -> toArray(line.chars()));
+    private Integer[][] readExample(final String input) {
+        final Stream<Integer[]> stream = input.lines().map(line -> toArray(line.chars()));
         final List<Integer[]> collect = stream.collect(Collectors.toList());
         return collect.toArray(new Integer[collect.size()][]);
     }
@@ -54,6 +62,28 @@ class Day15 {
     }
 
     @Test
+    void exampleSmallAStar() {
+        final Integer[][] grid = readExample(SMALL_EXAMPLE);
+        final List<Coordinate> cheapestPath = cheapestPathAStar(grid);
+        assertThat(cheapestPath.stream()
+                .filter(coord -> !coord.equals(new Coordinate(0,0)))
+                .mapToLong(coordinate -> grid[coordinate.yValue()][coordinate.xValue()])
+                .sum())
+                .isEqualTo(40);
+    }
+
+    @Test
+    void exampleTinyAStar() {
+        final Integer[][] grid = readExample(TINY_EXAMPLE);
+        final List<Coordinate> cheapestPath = cheapestPathAStar(grid);
+        assertThat(cheapestPath.stream()
+                .filter(coord -> !coord.equals(new Coordinate(0,0)))
+                .mapToLong(coordinate -> grid[coordinate.yValue()][coordinate.xValue()])
+                .sum())
+                .isEqualTo(7);
+    }
+
+    @Test
     void exampleTiny() {
         assertThat(cheapestPath(readExample(TINY_EXAMPLE))).isEqualTo(7);
     }
@@ -61,6 +91,66 @@ class Day15 {
     @Test
     void puzzleFull() {
         assertThat(cheapestPath(readFile())).isEqualTo(441);
+    }
+
+    @Test
+    void puzzleFullAStar() {
+        final Integer[][] grid = readFile();
+        final List<Coordinate> cheapestPath = cheapestPathAStar(grid);
+        assertThat(cheapestPath.stream()
+                .filter(coord -> !coord.equals(new Coordinate(0,0)))
+                .mapToLong(coordinate -> grid[coordinate.yValue()][coordinate.xValue()])
+                .sum())
+                .isEqualTo(441);
+    }
+
+    private List<Coordinate> cheapestPathAStar(final Integer[][] grid) {
+        final var fScore = new HashMap<Coordinate, Long>();
+        final var start = new Coordinate(0, 0);
+        final var goal = new Coordinate(grid[0].length - 1, grid.length - 1);
+        final var openSet = new PriorityQueue<Coordinate>(
+                Comparator.comparing(coordinate -> fScore.getOrDefault(coordinate, Long.MAX_VALUE)));
+        openSet.add(start);
+
+        final var cameFrom = new HashMap<Coordinate, Coordinate>();
+        final var gScore = new HashMap<Coordinate, Long>();
+        gScore.put(start, 0L);
+        final Function<Coordinate, Long> costToGoalHeuristic =
+                coord -> grid.length * grid.length * 9L;
+        fScore.put(start, costToGoalHeuristic.apply(start));
+
+        while (!openSet.isEmpty()) {
+            final var current = openSet.poll();
+            if (current.equals(goal)) {
+                return reconstructPath(cameFrom, current);
+            }
+
+            final Set<Coordinate> neighbours = current.orthogonalNeighboursInMap(grid);
+            neighbours.forEach(neighbour -> {
+                final var tentantiveGScore =
+                        gScore.getOrDefault(current, Long.MAX_VALUE) + grid[neighbour.yValue()][neighbour.xValue()];
+                if (tentantiveGScore < gScore.getOrDefault(neighbour, Long.MAX_VALUE)) {
+                    cameFrom.put(neighbour, current);
+                    gScore.put(neighbour, tentantiveGScore);
+                    fScore.put(neighbour, tentantiveGScore + costToGoalHeuristic.apply(neighbour));
+                    if (!openSet.contains(neighbour)) {
+                        openSet.add(neighbour);
+                    }
+                }
+            });
+        }
+        return emptyList();
+
+    }
+
+    private List<Coordinate> reconstructPath(final Map<Coordinate, Coordinate> cameFrom, final Coordinate current) {
+        final var path = new ArrayDeque<>(singleton(current));
+        var mutableCurrent = current;
+        while (cameFrom.keySet().contains(mutableCurrent)) {
+            mutableCurrent = cameFrom.get(mutableCurrent);
+            path.push(mutableCurrent);
+        }
+        return path.stream().toList();
     }
 
     @Test
