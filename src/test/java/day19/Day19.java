@@ -4,9 +4,14 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -175,15 +180,27 @@ class Day19 {
         return scannerScanner.tokens();
     }
 
+    private Stream<String> readString(final String input) {
+        var fis = new StringReader(input);
+        var buf = new BufferedReader(fis);
+        Scanner scannerScanner = new Scanner(buf);
+        scannerScanner.useDelimiter("--- scanner \\d+ ---");
+        return scannerScanner.tokens();
+    }
+
     @Test
     void testScannerTokenization() {
         final var inStream = new StringReader(TOKENIZATION_INPUT);
+        final List<String> result = tokenizeInput(inStream);
+        assertThat(result.get(0).lines().filter(s -> !s.isEmpty()).toList()).containsExactly(
+                "653,279,-501", "679,389,-558");
+    }
+
+    private List<String> tokenizeInput(final StringReader inStream) {
         var buf = new BufferedReader(inStream);
         Scanner scannerScanner = new Scanner(buf);
         scannerScanner.useDelimiter("--- scanner \\d+ ---");
-        final var result = scannerScanner.tokens().toList();
-        assertThat(result.get(0).lines().filter(s -> !s.isEmpty()).toList()).containsExactly(
-                "653,279,-501", "679,389,-558");
+        return scannerScanner.tokens().toList();
     }
 
     @Test
@@ -250,9 +267,40 @@ class Day19 {
     }
 
     @Test
+    void relativeDistanceIsZeroForSelf() {
+        final var position = new RelativePosition(3, 7, -23);
+        assertThat(position.relativeTo(position)).isEqualTo(new RelativePosition(0, 0, 0));
+    }
+
+    @Test
+    void relativeDistanceToZeroIsSelf() {
+        final var position = new RelativePosition(3, 7, -23);
+        assertThat(position.relativeTo(new RelativePosition(0, 0, 0))).isEqualTo(position);
+    }
+
+    @Test
+    void relativeDistanceToPointCloserToOrigin() {
+        final var position = new RelativePosition(2, 7, 5);
+        final var newOrigin = new RelativePosition(1, 6, 3);
+        assertThat(position.relativeTo(newOrigin)).isEqualTo(new RelativePosition(1, 1, 2));
+    }
+
+    @Test
     void parseScanners() {
-        final var result = readFile().toList();
-        final var scanners = result.stream().map(
+        final List<ProbeScanner> scanners = readScanners(readFile());
+        assertThat(scanners).hasSize(38);
+        assertThat(scanners.get(0).detectedProbes).contains(new RelativePosition(-519, -440, -646));
+    }
+
+    @Test
+    void workoutExample() {
+        final List<ProbeScanner> scanners = readScanners(readString(EXAMPLE));
+        System.out.println("Just a breakpoint");
+    }
+
+    private List<ProbeScanner> readScanners(final Stream<String> inputStream) {
+        final var input = inputStream.toList();
+        final var scanners = input.stream().map(
                         s -> {
                             final var scanner = new ProbeScanner();
                             s.lines().filter(line -> !line.isEmpty())
@@ -264,87 +312,133 @@ class Day19 {
                             return scanner;
                         })
                 .toList();
-        assertThat(scanners).hasSize(38);
+        return scanners;
     }
 
-    class RelativePosition {
-
-        @Override
-        public boolean equals(final Object o) {
-            if (this == o) {
-                return true;
+    @Test
+    void exploreRelativeStuff() {
+        final var probeScanners = readScanners(readFile());
+        for (final var scanner : probeScanners) {
+            for (final var innerScanner : probeScanners) {
+                if (scanner == innerScanner) {
+                    continue;
+                }
+                scanner.intersectsWith(innerScanner);
             }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            final RelativePosition that = (RelativePosition) o;
-            return xDist == that.xDist && yDist == that.yDist && zDist == that.zDist;
         }
+    }
 
-        @Override
-        public int hashCode() {
-            return Objects.hash(xDist, yDist, zDist);
+    @Test
+    void exploreRelativeStuffDistanceBased() {
+        final var probeScanners = readScanners(readFile());
+        for (final var scanner : probeScanners) {
+            for (final var innerScanner : probeScanners) {
+                if (scanner == innerScanner) {
+                    continue;
+                }
+                scanner.intersectsWithBasedOnDistances(innerScanner);
+            }
         }
+    }
 
-        private final int xDist;
-        private final int yDist;
-        private final int zDist;
 
-        RelativePosition(final int xDist, final int yDist, final int zDist) {
-            this.xDist = xDist;
-            this.yDist = yDist;
-            this.zDist = zDist;
-        }
-
-        RelativePosition rotateBy(final int xRot, final int yRot, final int zRot) {
-            if (xRot == 0 && yRot == 0 && zRot == 0) {
-                return this;
-            }
-            if (zRot == 1) {
-                return new RelativePosition(yDist, -xDist, zDist);
-            }
-            if (zRot == 2) {
-                return new RelativePosition(-xDist, -yDist, zDist);
-            }
-            if (zRot == 3) {
-                return new RelativePosition(-yDist, xDist, zDist);
-            }
-            if (yRot == 1) {
-                return new RelativePosition(zDist, yDist, -xDist);
-            }
-            if (yRot == 2) {
-                return new RelativePosition(-xDist, yDist, -zDist);
-            }
-            if (yRot == 3) {
-                return new RelativePosition(-zDist, yDist, xDist);
-            }
-            if (xRot == 1) {
-                return new RelativePosition(xDist, -zDist, yDist);
-            }
-            if (xRot == 2) {
-                return new RelativePosition(xDist, -yDist, -zDist);
-            }
-            if (xRot == 3) {
-                return new RelativePosition(xDist, zDist, -yDist);
-            }
-            return null;
-        }
-
-        @Override
-        public String toString() {
-            return "(" + xDist +
-                    "," + yDist +
-                    "," + zDist +
-                    ')';
-        }
+    @Test
+    void aScannerIntersectsWithItself() {
+        final var scanner = readScanners(readFile()).get(0);
+        assertThat(scanner.intersectsWith(scanner)).isTrue();
     }
 
     class ProbeScanner {
+
+        private int x;
+        private int y;
+        private int z;
 
         private final List<RelativePosition> detectedProbes = new ArrayList<>();
 
         public void addBeaconPosition(final RelativePosition pos) {
             detectedProbes.add(pos);
+        }
+
+        public Map<RelativePosition, Set<RelativePosition>> positionsBasedOnOrigins() {
+            return detectedProbes.stream().collect(Collectors.toMap(
+                    Function.identity(),
+                    localOrigin -> detectedProbes.stream().map(probe -> probe.relativeTo(localOrigin))
+                            .filter(p -> !p.equals(new RelativePosition(0, 0, 0)))
+                            .collect(Collectors.toSet())
+            ));
+        }
+
+        public Map<RelativePosition, Set<Long>> squaredDistancesFromPoint() {
+            return detectedProbes.stream().collect(Collectors.toMap(
+                    Function.identity(),
+                    localOrigin -> detectedProbes.stream().map(probe -> probe.relativeTo(localOrigin).squaredDistance())
+                            .filter(dist -> dist != 0L).collect(Collectors.toSet()))
+            );
+        }
+
+        public ProbeScanner rotatedBy(final int xSteps, final int ySteps, final int zSteps) {
+            final var rotated = new ProbeScanner();
+            detectedProbes.stream().map(p -> p.rotateBy(xSteps, ySteps, zSteps))
+                    .forEach(rotated::addBeaconPosition);
+            return rotated;
+        }
+
+        private List<ProbeScanner> allPermutations() {
+            final List<ProbeScanner> permutations = new ArrayList<>();
+            return IntStream.rangeClosed(0, 3).boxed()
+                    .flatMap(z -> IntStream.rangeClosed(0, 3).boxed()
+                            .flatMap(y -> IntStream.rangeClosed(0, 3)
+                                    .mapToObj(x -> this.rotatedBy(x, y, z)))).toList();
+        }
+
+        private boolean intersectsWith(final ProbeScanner otherScanner) {
+            for (final var scannerOrientation : otherScanner.allPermutations()) {
+                final var innerPosition = scannerOrientation.positionsBasedOnOrigins();
+                for (final Map.Entry<RelativePosition, Set<RelativePosition>> thisPositionEntry :
+                        positionsBasedOnOrigins().entrySet()) {
+                    for (final Map.Entry<RelativePosition, Set<RelativePosition>> innerPositionEntry :
+                            innerPosition.entrySet()) {
+                        final var currentSet = new HashSet<>(thisPositionEntry.getValue());
+                        currentSet.retainAll(innerPositionEntry.getValue());
+                        if (currentSet.size() >= 12) {
+                            System.out.println(
+                                    this + " matches " + otherScanner + " oriented as " + scannerOrientation);
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        private boolean intersectsWithBasedOnDistances(final ProbeScanner otherScanner) {
+                final var innerPosition = otherScanner.squaredDistancesFromPoint();
+                for (final Map.Entry<RelativePosition, Set<Long>> thisPositionEntry :
+                        squaredDistancesFromPoint().entrySet()) {
+                    for (final Map.Entry<RelativePosition, Set<Long>> otherPositionEntry :
+                            innerPosition.entrySet()) {
+                        final var currentSet = new HashSet<>(thisPositionEntry.getValue());
+                        currentSet.retainAll(otherPositionEntry.getValue());
+                        if (currentSet.size() >= 12) {
+                            System.out.println(
+                                    this + " matches " + otherScanner);
+                            return true;
+                        }
+                    }
+                }
+
+            return false;
+        }
+
+
+        @Override
+        public String toString() {
+            return "ProbeScanner{" +
+                    "x=" + x +
+                    ", y=" + y +
+                    ", z=" + z +
+                    '}';
         }
     }
 }
