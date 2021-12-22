@@ -1,6 +1,9 @@
 package day19;
 
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 class RelativePosition {
 
@@ -45,22 +48,22 @@ class RelativePosition {
             return new RelativePosition(-yDist, xDist, zDist).rotateBy(xRot, yRot, 0);
         }
         if (yRot == 1) {
-            return new RelativePosition(zDist, yDist, -xDist).rotateBy(xRot ,0, zRot);
+            return new RelativePosition(zDist, yDist, -xDist).rotateBy(xRot, 0, zRot);
         }
         if (yRot == 2) {
-            return new RelativePosition(-xDist, yDist, -zDist).rotateBy(xRot ,0, zRot);
+            return new RelativePosition(-xDist, yDist, -zDist).rotateBy(xRot, 0, zRot);
         }
         if (yRot == 3) {
-            return new RelativePosition(-zDist, yDist, xDist).rotateBy(xRot ,0, zRot);
+            return new RelativePosition(-zDist, yDist, xDist).rotateBy(xRot, 0, zRot);
         }
         if (xRot == 1) {
-            return new RelativePosition(xDist, -zDist, yDist).rotateBy(0 ,yRot, zRot);
+            return new RelativePosition(xDist, -zDist, yDist).rotateBy(0, yRot, zRot);
         }
         if (xRot == 2) {
-            return new RelativePosition(xDist, -yDist, -zDist).rotateBy(0 ,yRot, zRot);
+            return new RelativePosition(xDist, -yDist, -zDist).rotateBy(0, yRot, zRot);
         }
         if (xRot == 3) {
-            return new RelativePosition(xDist, zDist, -yDist).rotateBy(0 ,yRot, zRot);
+            return new RelativePosition(xDist, zDist, -yDist).rotateBy(0, yRot, zRot);
         }
         return null;
     }
@@ -78,6 +81,27 @@ class RelativePosition {
     }
 
     public long squaredDistance() {
-        return xDist*xDist + yDist*yDist + zDist*zDist;
+        return xDist * xDist + yDist * yDist + zDist * zDist;
+    }
+
+    public Set<Integer> pairSignature(final RelativePosition other) {
+        return Stream.of(Math.abs(xDist - other.xDist), Math.abs(yDist - other.yDist), Math.abs(zDist - other.zDist))
+                .collect(Collectors.toSet());
+    }
+
+    public RelativePosition shiftX(final int xAmount) {
+        return new RelativePosition(xDist + xAmount, yDist, zDist);
+    }
+
+    public RelativePosition shiftY(final int yAmount) {
+        return new RelativePosition(xDist, yDist + yAmount, zDist);
+    }
+
+    public RelativePosition shiftZ(final int zAmount) {
+        return new RelativePosition(xDist, yDist, zDist + zAmount);
+    }
+
+    public int xComponent() {
+        return xDist;
     }
 }

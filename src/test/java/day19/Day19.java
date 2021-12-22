@@ -3,19 +3,22 @@ package day19;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.StringReader;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import io.vavr.Tuple;
+
+import static java.util.Collections.singleton;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class Day19 {
@@ -32,6 +35,17 @@ class Day19 {
             --- scanner 2 ---
             -433,-534,544
             -435,-569,466""";
+
+    private static final String MINI_EXAMPLE = """
+            --- scanner 0 ---
+            0,2,0
+            4,1,0
+            3,3,0
+                        
+            --- scanner 1 ---
+            -1,-1,0
+            -5,0,0
+            -2,1,0""";
 
     private static final String EXAMPLE = """
             --- scanner 0 ---
@@ -289,13 +303,127 @@ class Day19 {
     void parseScanners() {
         final List<ProbeScanner> scanners = readScanners(readFile());
         assertThat(scanners).hasSize(38);
-        assertThat(scanners.get(0).detectedProbes).contains(new RelativePosition(-519, -440, -646));
+        assertThat(scanners.get(0).getDetectedProbes()).contains(new RelativePosition(-519, -440, -646));
     }
 
     @Test
-    void workoutExample() {
+    void testIntersectionOnXAxis() {
         final List<ProbeScanner> scanners = readScanners(readString(EXAMPLE));
-        System.out.println("Just a breakpoint");
+        final var scanner0 = scanners.get(0);
+        final var scanner1 = scanners.get(1);
+
+        assertThat(scanner1.allPermutations().stream().anyMatch(scanner0::intersectsOnX)).isTrue();
+    }
+
+    @Test
+    void testSignatures() {
+        final List<ProbeScanner> scanners = readScanners(readString(EXAMPLE));
+        final var scanner0 = scanners.get(0);
+        final var scanner1 = scanners.get(1);
+
+        final var sigs0 = scanner0.signatures();
+        final var sigs1 = scanner1.signatures();
+
+        final var keyset0 = new HashSet<>(sigs0.keySet());
+        keyset0.retainAll(sigs1.keySet());
+        assertThat(keyset0).hasSize(66);
+    }
+
+    @Test
+    void fullExampleUsingSignatures() {
+        final List<ProbeScanner> scanners = readScanners(readString(EXAMPLE));
+
+        var totalCoordinates = scanners.stream().mapToInt(scanner -> scanner.getDetectedProbes().size()).sum();
+
+        var overlapMapping = new HashMap<Integer, Set<Integer>>();
+        var totalSum = totalCoordinates;
+        for (int i = 0; i < scanners.size(); i++) {
+            for (int j = i; j < scanners.size(); j++) {
+                if (overlaps(scanners.get(i), scanners.get(j))) {
+                    overlapMapping.merge(i, singleton(j), (s1, s2) -> {
+                        final var newValue = new HashSet<>(s1);
+                        newValue.addAll(s2);
+                        return newValue;
+                    });
+                    System.out.println("Scanner " + i + " overlaps scanner " + j);
+                    totalSum -= 12;
+                }
+
+            }
+        }
+        final int alternativeSum = overlapMapping.entrySet().stream().mapToInt(e -> {
+            final var totalPoints = e.getValue().stream().mapToInt(i -> scanners.get(i).getDetectedProbes().size() + scanners.get(e.getKey()).getDetectedProbes().size()).sum();
+            return totalPoints - e.getValue().size() * 12;
+        }).sum();
+        assertThat(totalSum).isEqualTo(79);
+        assertThat(alternativeSum).isEqualTo(79);
+    }
+
+    @Test
+    void tryAll() {
+        final List<ProbeScanner> scanners = readScanners(readFile());
+
+        final var scanner0 = scanners.get(0);
+        final var scanner1 = scanners.get(1);
+        final var scanner2 = scanners.get(2);
+        final var scanner3 = scanners.get(3);
+        final var scanner4 = scanners.get(4);
+
+        var totalCoordinates = scanners.stream().mapToInt(scanner -> scanner.getDetectedProbes().size()).sum();
+
+        var totalSum = totalCoordinates;
+        for (int i = 0; i < scanners.size(); i++) {
+            for (int j = i; j < scanners.size(); j++) {
+                if (overlaps(scanners.get(i), scanners.get(j))) {
+                    System.out.println("Scanner " + i + " overlaps scanner " + j);
+                    totalSum -= 12;
+                }
+
+            }
+        }
+        assertThat(totalSum).isEqualTo(79);
+    }
+
+    private boolean overlaps(final ProbeScanner scanner1, final ProbeScanner scanner2) {
+        final var sigs1 = scanner1.signatures();
+        final var sigs2 = scanner2.signatures();
+
+        final var keyset0 = new HashSet<>(sigs1.keySet());
+        keyset0.retainAll(sigs2.keySet());
+        return keyset0.size() == 66;
+    }
+
+    @Test
+    void testIntersectionOnXAxisChosenVariants() {
+        final List<ProbeScanner> scanners = readScanners(readString(EXAMPLE));
+        final var scanner0 = scanners.get(0);
+        final var scanner1 = scanners.get(1);
+
+        assertThat(scanner1.allPermutations().stream().anyMatch(scanner0::intersectsOnX)).isTrue();
+    }
+
+    @Test
+    void testIntersectionOnXAxisMini() {
+        final List<ProbeScanner> scanners = readScanners(readString(MINI_EXAMPLE));
+        final var scanner0 = scanners.get(0);
+        final var scanner1 = scanners.get(1);
+        assertThat(scanner0.intersectsOnX(scanner1, 3)).isTrue();
+    }
+
+    @Test
+    void filterDoubleRotations() {
+        final RelativePosition pos = new RelativePosition(1, 2, 3);
+        final var allPositions = IntStream.rangeClosed(0, 3).boxed()
+                .flatMap(x -> IntStream.rangeClosed(0, 3).boxed()
+                        .flatMap(y -> IntStream.rangeClosed(0, 3)
+                                .mapToObj(z -> Tuple.of(
+                                        String.join(",", Integer.toString(x), Integer.toString(y), Integer.toString(z)),
+                                        pos.rotateBy(x, y, z))))).collect(Collectors.toMap(t -> t._1, t -> t._2));
+
+        final var resultsByTransform = allPositions.entrySet().stream()
+                .collect(Collectors.groupingBy(Map.Entry::getValue, Collectors.mapping(
+                        Map.Entry::getKey, Collectors.toSet())));
+        System.out.println("End");
     }
 
     private List<ProbeScanner> readScanners(final Stream<String> inputStream) {
@@ -316,6 +444,7 @@ class Day19 {
     }
 
     @Test
+    @Disabled
     void exploreRelativeStuff() {
         final var probeScanners = readScanners(readFile());
         for (final var scanner : probeScanners) {
@@ -336,11 +465,11 @@ class Day19 {
                 if (scanner == innerScanner) {
                     continue;
                 }
-                scanner.intersectsWithBasedOnDistances(innerScanner);
+                final var scannersMatch = innerScanner.allPermutations().stream()
+                        .anyMatch(scanner::intersectsWithBasedOnDistances);
             }
         }
     }
-
 
     @Test
     void aScannerIntersectsWithItself() {
@@ -348,97 +477,4 @@ class Day19 {
         assertThat(scanner.intersectsWith(scanner)).isTrue();
     }
 
-    class ProbeScanner {
-
-        private int x;
-        private int y;
-        private int z;
-
-        private final List<RelativePosition> detectedProbes = new ArrayList<>();
-
-        public void addBeaconPosition(final RelativePosition pos) {
-            detectedProbes.add(pos);
-        }
-
-        public Map<RelativePosition, Set<RelativePosition>> positionsBasedOnOrigins() {
-            return detectedProbes.stream().collect(Collectors.toMap(
-                    Function.identity(),
-                    localOrigin -> detectedProbes.stream().map(probe -> probe.relativeTo(localOrigin))
-                            .filter(p -> !p.equals(new RelativePosition(0, 0, 0)))
-                            .collect(Collectors.toSet())
-            ));
-        }
-
-        public Map<RelativePosition, Set<Long>> squaredDistancesFromPoint() {
-            return detectedProbes.stream().collect(Collectors.toMap(
-                    Function.identity(),
-                    localOrigin -> detectedProbes.stream().map(probe -> probe.relativeTo(localOrigin).squaredDistance())
-                            .filter(dist -> dist != 0L).collect(Collectors.toSet()))
-            );
-        }
-
-        public ProbeScanner rotatedBy(final int xSteps, final int ySteps, final int zSteps) {
-            final var rotated = new ProbeScanner();
-            detectedProbes.stream().map(p -> p.rotateBy(xSteps, ySteps, zSteps))
-                    .forEach(rotated::addBeaconPosition);
-            return rotated;
-        }
-
-        private List<ProbeScanner> allPermutations() {
-            final List<ProbeScanner> permutations = new ArrayList<>();
-            return IntStream.rangeClosed(0, 3).boxed()
-                    .flatMap(z -> IntStream.rangeClosed(0, 3).boxed()
-                            .flatMap(y -> IntStream.rangeClosed(0, 3)
-                                    .mapToObj(x -> this.rotatedBy(x, y, z)))).toList();
-        }
-
-        private boolean intersectsWith(final ProbeScanner otherScanner) {
-            for (final var scannerOrientation : otherScanner.allPermutations()) {
-                final var innerPosition = scannerOrientation.positionsBasedOnOrigins();
-                for (final Map.Entry<RelativePosition, Set<RelativePosition>> thisPositionEntry :
-                        positionsBasedOnOrigins().entrySet()) {
-                    for (final Map.Entry<RelativePosition, Set<RelativePosition>> innerPositionEntry :
-                            innerPosition.entrySet()) {
-                        final var currentSet = new HashSet<>(thisPositionEntry.getValue());
-                        currentSet.retainAll(innerPositionEntry.getValue());
-                        if (currentSet.size() >= 12) {
-                            System.out.println(
-                                    this + " matches " + otherScanner + " oriented as " + scannerOrientation);
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-
-        private boolean intersectsWithBasedOnDistances(final ProbeScanner otherScanner) {
-                final var innerPosition = otherScanner.squaredDistancesFromPoint();
-                for (final Map.Entry<RelativePosition, Set<Long>> thisPositionEntry :
-                        squaredDistancesFromPoint().entrySet()) {
-                    for (final Map.Entry<RelativePosition, Set<Long>> otherPositionEntry :
-                            innerPosition.entrySet()) {
-                        final var currentSet = new HashSet<>(thisPositionEntry.getValue());
-                        currentSet.retainAll(otherPositionEntry.getValue());
-                        if (currentSet.size() >= 12) {
-                            System.out.println(
-                                    this + " matches " + otherScanner);
-                            return true;
-                        }
-                    }
-                }
-
-            return false;
-        }
-
-
-        @Override
-        public String toString() {
-            return "ProbeScanner{" +
-                    "x=" + x +
-                    ", y=" + y +
-                    ", z=" + z +
-                    '}';
-        }
-    }
 }
