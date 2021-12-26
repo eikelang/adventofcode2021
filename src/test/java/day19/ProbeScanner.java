@@ -91,14 +91,14 @@ class ProbeScanner {
         return intersectsOnX(otherScanner, MIN_MATCHES);
     }
 
-    Map<Set<Integer>, List<Tuple2<RelativePosition, RelativePosition>>> signatures() {
-        final var signatureMap = new HashMap<Set<Integer>, List<Tuple2<RelativePosition, RelativePosition>>>();
+    Map<Integer, Set<Set<RelativePosition>>> signatures() {
+        final var signatureMap = new HashMap<Integer, Set<Set<RelativePosition>>>();
         detectedProbes.forEach(probe -> detectedProbes.forEach(innerProbe -> {
             if (probe != innerProbe) {
                 signatureMap.merge(probe.pairSignature(innerProbe),
-                        new ArrayList<>(singletonList(Tuple.of(innerProbe, probe))),
+                        Set.of((Set.of(innerProbe, probe))),
                         (existingTuples, newTupleSingleton) -> Stream.concat(existingTuples.stream(),
-                                newTupleSingleton.stream()).toList());
+                                newTupleSingleton.stream()).collect(Collectors.toSet()));
             }
         }));
         return signatureMap;

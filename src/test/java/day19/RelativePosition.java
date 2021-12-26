@@ -84,9 +84,9 @@ class RelativePosition {
         return xDist * xDist + yDist * yDist + zDist * zDist;
     }
 
-    public Set<Integer> pairSignature(final RelativePosition other) {
-        return Stream.of(Math.abs(xDist - other.xDist), Math.abs(yDist - other.yDist), Math.abs(zDist - other.zDist))
-                .collect(Collectors.toSet());
+    public Integer pairSignature(final RelativePosition other) {
+        return (xDist - other.xDist) * (xDist - other.xDist) + (yDist - other.yDist) * (yDist - other.yDist) +
+        (zDist - other.zDist) * (zDist - other.zDist);
     }
 
     public RelativePosition shiftX(final int xAmount) {

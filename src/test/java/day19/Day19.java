@@ -3,6 +3,7 @@ package day19;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -307,15 +308,6 @@ class Day19 {
     }
 
     @Test
-    void testIntersectionOnXAxis() {
-        final List<ProbeScanner> scanners = readScanners(readString(EXAMPLE));
-        final var scanner0 = scanners.get(0);
-        final var scanner1 = scanners.get(1);
-
-        assertThat(scanner1.allPermutations().stream().anyMatch(scanner0::intersectsOnX)).isTrue();
-    }
-
-    @Test
     void testSignatures() {
         final List<ProbeScanner> scanners = readScanners(readString(EXAMPLE));
         final var scanner0 = scanners.get(0);
@@ -348,11 +340,12 @@ class Day19 {
                     System.out.println("Scanner " + i + " overlaps scanner " + j);
                     totalSum -= 12;
                 }
-
             }
         }
         final int alternativeSum = overlapMapping.entrySet().stream().mapToInt(e -> {
-            final var totalPoints = e.getValue().stream().mapToInt(i -> scanners.get(i).getDetectedProbes().size() + scanners.get(e.getKey()).getDetectedProbes().size()).sum();
+            final var totalPoints = e.getValue().stream().mapToInt(
+                    i -> scanners.get(i).getDetectedProbes().size() + scanners.get(e.getKey()).getDetectedProbes()
+                            .size()).sum();
             return totalPoints - e.getValue().size() * 12;
         }).sum();
         assertThat(totalSum).isEqualTo(79);
@@ -363,12 +356,16 @@ class Day19 {
     void tryAll() {
         final List<ProbeScanner> scanners = readScanners(readFile());
 
-        final var scanner0 = scanners.get(0);
-        final var scanner1 = scanners.get(1);
-        final var scanner2 = scanners.get(2);
-        final var scanner3 = scanners.get(3);
-        final var scanner4 = scanners.get(4);
-
+        final var reduced = scanners.stream().map(ProbeScanner::signatures)
+                .reduce((m1, m2) -> {
+                    final var newMap = new HashMap<>(m1);
+                    m2.forEach((key, value) -> newMap.merge(key, value, (sets, sets2) -> {
+                        final var newSet = new HashSet<>(sets);
+                        newSet.addAll(sets2);
+                        return newSet;
+                    }));
+                    return newMap;
+                });
         var totalCoordinates = scanners.stream().mapToInt(scanner -> scanner.getDetectedProbes().size()).sum();
 
         var totalSum = totalCoordinates;
@@ -390,16 +387,17 @@ class Day19 {
 
         final var keyset0 = new HashSet<>(sigs1.keySet());
         keyset0.retainAll(sigs2.keySet());
-        return keyset0.size() == 66;
+        return keyset0.size() >= 66;
     }
 
-    @Test
-    void testIntersectionOnXAxisChosenVariants() {
-        final List<ProbeScanner> scanners = readScanners(readString(EXAMPLE));
-        final var scanner0 = scanners.get(0);
-        final var scanner1 = scanners.get(1);
+    private Scanner relativeTo(final ProbeScanner scanner1, final ProbeScanner scanner2) {
+        final var sigs1 = scanner1.signatures();
+        final var sigs2 = scanner2.signatures();
 
-        assertThat(scanner1.allPermutations().stream().anyMatch(scanner0::intersectsOnX)).isTrue();
+        final var sharedDistances = new HashSet<>(sigs1.keySet());
+        sharedDistances.retainAll(sigs2.keySet());
+        return null;
+
     }
 
     @Test
@@ -458,6 +456,7 @@ class Day19 {
     }
 
     @Test
+    @Disabled
     void exploreRelativeStuffDistanceBased() {
         final var probeScanners = readScanners(readFile());
         for (final var scanner : probeScanners) {

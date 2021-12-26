@@ -1,0 +1,61 @@
+push w1 + 14
+
+push w2 + 8
+
+push w3 + 5
+
+pop (w3+5=w4 <=> w4=w3-5
+
+push w4+10
+
+push w5+13
+
+push w6+16
+
+pop (w6+16-9=w7 <=> w6+7=w7)
+
+push w8+6
+
+push w9+13
+
+pop (w9+13-14=w10 <=> w9-1 = w10)
+
+pop (w8+6-3=w11 <=> w8+3 = w11)
+
+inp w
+mul x 0
+add x z
+mod x 26
+div z 26
+add x -2
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 13
+mul y x
+add z y
+
+inp w
+mul x 0
+add x z
+mod x 26
+div z 26
+add x -14
+eql x w
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1
+mul z y
+mul y 0
+add y w
+add y 3
+mul y x
+add z y
